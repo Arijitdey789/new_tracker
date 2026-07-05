@@ -1,0 +1,24 @@
+# CCTV FRS — Python Dependencies
+# ================================
+
+# ASGI Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Template engine
+jinja2>=3.1.2
+
+# File upload handling
+python-multipart>=0.0.6
+
+# Image / Video processing
+opencv-python>=4.8.0
+numpy>=1.24.0,<2.0.0
+Pillow>=10.0.0
+
+# Face Detection & Embedding (ArcFace 512-d via ONNX)
+insightface>=0.7.3
+onnxruntime>=1.16.0
+
+# WebSocket support (included with uvicorn[standard])
+websockets>=11.0

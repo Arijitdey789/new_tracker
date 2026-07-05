@@ -1,0 +1,1744 @@
+/* ==========================================================================
+   SENTINEL PRO — Live CCTV Monitoring Dashboard Styles
+   "Hacking / Tracking / Dark Web" Terminal Aesthetic
+   
+   Uses design tokens from index.css (--matrix-*, --tracking-*, --font-mono)
+   Never distort 8:5 aspect ratio. All sizing in relative units.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   SECTION 1: FULLSCREEN MONITORING OVERLAY (Base Container)
+   ========================================================================== */
+
+.fs-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--matrix-dark);
+    display: flex;
+    font-family: var(--font-mono);
+    animation: fs-fade-in 0.3s ease;
+    overflow: hidden;
+}
+
+/* Matrix rain background canvas (positioned behind everything) */
+.fs-matrix-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.06;
+    pointer-events: none;
+}
+
+/* CRT scanline overlay across the entire dashboard */
+.fs-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 10000;
+    animation: scanline-drift 12s linear infinite;
+}
+
+
+/* ==========================================================================
+   SECTION 2: LEFT NAVIGATION PANEL
+   ========================================================================== */
+
+.fs-nav-panel {
+    width: 280px;
+    background: rgba(10, 14, 10, 0.96);
+    border-right: 1px solid var(--hud-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    z-index: 2;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Collapsed state */
+.fs-nav-panel.collapsed {
+    width: 0;
+    opacity: 0;
+    border-right: none;
+    pointer-events: none;
+}
+
+.fs-nav-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--hud-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 255, 65, 0.02);
+}
+
+.fs-nav-title {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--matrix-green);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px var(--matrix-green-glow);
+}
+
+.fs-nav-title i {
+    width: 16px;
+    height: 16px;
+}
+
+.fs-nav-count {
+    font-size: 10px;
+    color: var(--matrix-green-dim);
+    background: var(--matrix-green-soft);
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(0, 255, 65, 0.15);
+}
+
+.fs-nav-toggle {
+    background: none;
+    border: 1px solid var(--hud-border);
+    color: var(--matrix-green-dim);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.fs-nav-toggle:hover {
+    color: var(--matrix-green);
+    border-color: var(--matrix-green);
+    box-shadow: 0 0 8px var(--matrix-green-glow);
+}
+
+.fs-nav-toggle i {
+    width: 14px;
+    height: 14px;
+}
+
+/* Camera list container */
+.fs-nav-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 255, 65, 0.2) transparent;
+}
+
+.fs-nav-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.fs-nav-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.fs-nav-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 65, 0.2);
+    border-radius: 4px;
+}
+
+/* Individual camera entry in nav panel */
+.fs-nav-cam {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border: 1px solid transparent;
+    font-family: var(--font-mono);
+}
+
+.fs-nav-cam:hover {
+    background: rgba(0, 255, 65, 0.06);
+    border-color: rgba(0, 255, 65, 0.1);
+}
+
+.fs-nav-cam.active {
+    background: rgba(0, 255, 65, 0.08);
+    border-color: rgba(0, 255, 65, 0.2);
+    border-left: 3px solid var(--matrix-green);
+}
+
+.fs-nav-cam.tracking {
+    background: var(--tracking-red-soft);
+    border-color: rgba(255, 0, 64, 0.3);
+    border-left: 3px solid var(--tracking-red);
+    animation: nav-tracking-pulse 2s ease-in-out infinite;
+}
+
+.fs-nav-cam.offline {
+    opacity: 0.4;
+}
+
+/* Status indicator dot */
+.fs-nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.fs-nav-dot.online {
+    background: var(--matrix-green);
+    box-shadow: 0 0 6px var(--matrix-green-glow);
+}
+
+.fs-nav-dot.tracking {
+    background: var(--tracking-red);
+    box-shadow: 0 0 8px var(--tracking-red-glow);
+    animation: dot-pulse 1.2s ease-in-out infinite;
+}
+
+.fs-nav-dot.offline {
+    background: #555;
+    box-shadow: none;
+}
+
+/* Camera info text */
+.fs-nav-cam-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.fs-nav-cam-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #c0ffc8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fs-nav-cam-loc {
+    font-size: 10px;
+    color: rgba(0, 255, 65, 0.4);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Tracking indicator icon in nav */
+.fs-nav-tracking-icon {
+    color: var(--tracking-red);
+    animation: tracking-icon-blink 1s ease-in-out infinite;
+    font-size: 10px;
+    font-weight: bold;
+    text-shadow: 0 0 6px var(--tracking-red-glow);
+}
+
+/* Panel footer - connection status */
+.fs-nav-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--hud-border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: rgba(0, 255, 65, 0.5);
+    background: rgba(0, 255, 65, 0.02);
+}
+
+.fs-nav-footer .ws-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.fs-nav-footer .ws-status-dot.connected {
+    background: var(--matrix-green);
+    box-shadow: 0 0 4px var(--matrix-green-glow);
+}
+
+.fs-nav-footer .ws-status-dot.simulation {
+    background: var(--tracking-amber);
+    box-shadow: 0 0 4px var(--tracking-amber-glow);
+}
+
+
+/* ==========================================================================
+   SECTION 3: MAIN CONTENT AREA
+   ========================================================================== */
+
+.fs-main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    z-index: 1;
+    position: relative;
+    background: var(--matrix-dark);
+}
+
+/* ---- Top HUD Bar ---- */
+.fs-hud-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: rgba(0, 255, 65, 0.02);
+    border-bottom: 1px solid var(--hud-border);
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    z-index: 3;
+}
+
+.fs-hud-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.fs-hud-mode {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 3px;
+    border: 1px solid;
+}
+
+.fs-hud-mode.normal {
+    color: var(--matrix-green);
+    border-color: rgba(0, 255, 65, 0.3);
+    background: var(--matrix-green-soft);
+    text-shadow: 0 0 6px var(--matrix-green-glow);
+}
+
+.fs-hud-mode.tracking {
+    color: var(--tracking-red);
+    border-color: rgba(255, 0, 64, 0.4);
+    background: var(--tracking-red-soft);
+    text-shadow: 0 0 6px var(--tracking-red-glow);
+    animation: hud-mode-pulse 1.5s ease-in-out infinite;
+}
+
+.fs-hud-cam-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--matrix-green);
+    text-shadow: 0 0 6px var(--matrix-green-glow);
+}
+
+.fs-hud-cam-loc {
+    font-size: 11px;
+    color: rgba(0, 255, 65, 0.5);
+}
+
+.fs-hud-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.fs-hud-clock {
+    font-size: 12px;
+    color: var(--matrix-green-dim);
+    letter-spacing: 0.05em;
+}
+
+.fs-hud-live {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: rgba(255, 0, 64, 0.15);
+    color: var(--tracking-red);
+    border: 1px solid rgba(255, 0, 64, 0.3);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    font-family: var(--font-mono);
+}
+
+.fs-hud-live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--tracking-red);
+    border-radius: 50%;
+    animation: dot-pulse 1.2s ease-in-out infinite;
+    box-shadow: 0 0 6px var(--tracking-red-glow);
+}
+
+/* Nav panel toggle button (visible when panel is collapsed) */
+.fs-panel-toggle-btn {
+    background: rgba(0, 255, 65, 0.08);
+    border: 1px solid var(--hud-border);
+    color: var(--matrix-green-dim);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+}
+
+.fs-panel-toggle-btn:hover {
+    color: var(--matrix-green);
+    border-color: var(--matrix-green);
+    box-shadow: 0 0 8px var(--matrix-green-glow);
+}
+
+.fs-panel-toggle-btn i {
+    width: 14px;
+    height: 14px;
+}
+
+
+/* ==========================================================================
+   SECTION 4: NORMAL MODE — Camera Grid with 8:5 Tiles + Pagination
+   ========================================================================== */
+
+.fs-grid-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* The responsive camera tile grid */
+.fs-camera-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(clamp(200px, 22vw, 400px), 1fr));
+    gap: 10px;
+    align-content: start;
+    overflow: hidden;
+}
+
+/* Individual camera tile — 8:5 aspect ratio, NEVER distort */
+.fs-camera-tile {
+    aspect-ratio: 8 / 5;
+    background: var(--matrix-dark-alt);
+    border: 1px solid var(--hud-border);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    font-family: var(--font-mono);
+}
+
+.fs-camera-tile:hover {
+    border-color: var(--matrix-green);
+    box-shadow: 0 0 12px var(--matrix-green-glow),
+                inset 0 0 30px rgba(0, 255, 65, 0.03);
+    transform: scale(1.01);
+}
+
+.fs-camera-tile.tracking {
+    border-color: var(--tracking-red);
+    box-shadow: 0 0 20px var(--tracking-red-glow),
+                inset 0 0 30px rgba(255, 0, 64, 0.05);
+    animation: tile-tracking-pulse 2s ease-in-out infinite;
+}
+
+.fs-camera-tile.offline {
+    opacity: 0.35;
+    filter: grayscale(0.5);
+}
+
+/* Canvas / video fill inside tile */
+.fs-tile-canvas {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+    object-fit: cover;
+}
+
+/* CRT scanline on each tile */
+.fs-camera-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.04) 2px,
+        rgba(0, 0, 0, 0.04) 4px
+    );
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Tile info overlay at bottom */
+.fs-tile-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px 12px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+    z-index: 3;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+.fs-tile-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--matrix-green);
+    text-shadow: 0 0 4px var(--matrix-green-glow);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fs-tile-loc {
+    font-size: 9px;
+    color: rgba(0, 255, 65, 0.4);
+    margin-top: 2px;
+}
+
+.fs-tile-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.fs-tile-status.live {
+    color: var(--matrix-green);
+}
+
+.fs-tile-status.tracking-active {
+    color: var(--tracking-red);
+    animation: tracking-icon-blink 1s ease-in-out infinite;
+}
+
+.fs-tile-status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 4px currentColor;
+}
+
+/* Tile placeholder content (when no feed) */
+.fs-tile-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: rgba(0, 255, 65, 0.2);
+    z-index: 1;
+}
+
+.fs-tile-placeholder i {
+    width: 32px;
+    height: 32px;
+    opacity: 0.5;
+}
+
+.fs-tile-placeholder-id {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+    opacity: 0.5;
+}
+
+
+/* ---- Pagination Controls ---- */
+.fs-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 0;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+}
+
+.fs-page-btn {
+    background: rgba(0, 255, 65, 0.06);
+    border: 1px solid var(--hud-border);
+    color: var(--matrix-green-dim);
+    cursor: pointer;
+    padding: 6px 14px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fs-page-btn:hover:not(:disabled) {
+    color: var(--matrix-green);
+    border-color: var(--matrix-green);
+    box-shadow: 0 0 8px var(--matrix-green-glow);
+    background: rgba(0, 255, 65, 0.1);
+}
+
+.fs-page-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.fs-page-btn i {
+    width: 12px;
+    height: 12px;
+}
+
+.fs-page-indicator {
+    font-size: 11px;
+    color: var(--matrix-green-dim);
+    letter-spacing: 0.1em;
+}
+
+.fs-page-indicator .current {
+    color: var(--matrix-green);
+    font-weight: 700;
+    text-shadow: 0 0 4px var(--matrix-green-glow);
+}
+
+
+/* ==========================================================================
+   SECTION 5: TRACKING MODE — Full Viewport / Dynamic Grid
+   ========================================================================== */
+
+/* Container for tracking mode (replaces grid container) */
+.fs-tracking-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    overflow: hidden;
+    position: relative;
+    animation: tracking-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Single tracking camera — fills viewport */
+.fs-tracking-single {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.fs-tracking-single .fs-tracking-feed {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 8 / 5;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Multiple tracking cameras — dynamic equal-size grid */
+.fs-tracking-grid {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    gap: 8px;
+    align-content: center;
+    justify-content: center;
+}
+
+/* Dynamic grid column configurations */
+.fs-tracking-grid[data-count="2"] {
+    grid-template-columns: 1fr 1fr;
+}
+
+.fs-tracking-grid[data-count="3"],
+.fs-tracking-grid[data-count="4"] {
+    grid-template-columns: 1fr 1fr;
+}
+
+.fs-tracking-grid[data-count="5"],
+.fs-tracking-grid[data-count="6"] {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.fs-tracking-grid[data-count="7"],
+.fs-tracking-grid[data-count="8"],
+.fs-tracking-grid[data-count="9"] {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Each tracking feed tile — preserves 8:5 */
+.fs-tracking-tile {
+    aspect-ratio: 8 / 5;
+    background: var(--matrix-dark-alt);
+    border: 2px solid var(--tracking-red);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px var(--tracking-red-glow);
+    animation: tracking-tile-pulse 2.5s ease-in-out infinite;
+    font-family: var(--font-mono);
+}
+
+.fs-tracking-tile canvas {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+    object-fit: cover;
+}
+
+/* CRT scanline on tracking tiles */
+.fs-tracking-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255, 0, 64, 0.03) 2px,
+        rgba(255, 0, 64, 0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 4;
+}
+
+
+/* ==========================================================================
+   SECTION 6: HUD OVERLAYS — "TARGET ACQUIRED" & Tracking Info
+   ========================================================================== */
+
+/* Target Acquired HUD overlay on tracking feed */
+.fs-hud-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Top HUD bar inside tracking feed */
+.fs-hud-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: linear-gradient(rgba(0, 0, 0, 0.7), transparent);
+}
+
+.fs-hud-target-badge {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--tracking-red);
+    text-shadow: 0 0 8px var(--tracking-red-glow);
+    animation: hud-text-blink 1.5s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fs-hud-target-badge::before {
+    content: '◉';
+    font-size: 8px;
+    animation: dot-pulse 1s ease-in-out infinite;
+}
+
+.fs-hud-target-id {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--tracking-amber);
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 6px var(--tracking-amber-glow);
+}
+
+/* Bottom HUD info */
+.fs-hud-bottom {
+    margin-top: auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 16px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+}
+
+.fs-hud-cam-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+    font-family: var(--font-mono);
+}
+
+.fs-hud-location {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: var(--font-mono);
+    margin-top: 2px;
+}
+
+.fs-hud-timestamp {
+    font-size: 10px;
+    color: var(--matrix-green);
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+    text-shadow: 0 0 4px var(--matrix-green-glow);
+}
+
+.fs-hud-coords {
+    font-size: 10px;
+    color: var(--tracking-amber);
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+    text-align: right;
+    text-shadow: 0 0 4px var(--tracking-amber-glow);
+}
+
+.fs-hud-confidence {
+    font-size: 11px;
+    color: var(--tracking-red);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    text-shadow: 0 0 6px var(--tracking-red-glow);
+    margin-top: 4px;
+}
+
+/* Detection bounding box */
+.fs-detection-box {
+    position: absolute;
+    border: 2px solid var(--tracking-red);
+    border-radius: 2px;
+    box-shadow: 0 0 12px var(--tracking-red-glow);
+    animation: detection-box-pulse 1.5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 6;
+}
+
+.fs-detection-box::before {
+    content: 'TARGET';
+    position: absolute;
+    top: -20px;
+    left: 0;
+    background: var(--tracking-red);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+}
+
+.fs-detection-box::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border: 1px solid rgba(255, 0, 64, 0.25);
+    border-radius: 4px;
+    animation: detection-box-outer 2s ease-in-out infinite;
+}
+
+/* Corner brackets HUD effect */
+.fs-hud-corners {
+    position: absolute;
+    inset: 8px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.fs-hud-corners::before,
+.fs-hud-corners::after {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-color: var(--tracking-red);
+    border-style: solid;
+}
+
+.fs-hud-corners::before {
+    top: 0;
+    left: 0;
+    border-width: 2px 0 0 2px;
+}
+
+.fs-hud-corners::after {
+    bottom: 0;
+    right: 0;
+    border-width: 0 2px 2px 0;
+}
+
+.fs-hud-corners-inner::before,
+.fs-hud-corners-inner::after {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-color: var(--tracking-red);
+    border-style: solid;
+}
+
+.fs-hud-corners-inner::before {
+    top: 0;
+    right: 0;
+    border-width: 2px 2px 0 0;
+}
+
+.fs-hud-corners-inner::after {
+    bottom: 0;
+    left: 0;
+    border-width: 0 0 2px 2px;
+}
+
+
+/* ==========================================================================
+   SECTION 7: MANUAL FULLSCREEN (Single Camera Override)
+   ========================================================================== */
+
+.fs-manual-fullscreen {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background: var(--matrix-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: manual-fs-enter 0.25s ease;
+}
+
+.fs-manual-feed {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fs-manual-feed canvas {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+    object-fit: cover;
+}
+
+.fs-manual-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 25;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--hud-border);
+    color: var(--matrix-green);
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fs-manual-close:hover {
+    background: rgba(255, 0, 64, 0.2);
+    border-color: var(--tracking-red);
+    color: var(--tracking-red);
+    box-shadow: 0 0 12px var(--tracking-red-glow);
+}
+
+.fs-manual-close i {
+    width: 14px;
+    height: 14px;
+}
+
+.fs-manual-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px 24px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+    z-index: 22;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+}
+
+
+/* ==========================================================================
+   SECTION 8: BOTTOM CONTROL BAR
+   ========================================================================== */
+
+.fs-bottom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    flex-shrink: 0;
+    gap: 16px;
+    border-top: 1px solid var(--hud-border);
+    background: rgba(0, 255, 65, 0.02);
+    font-family: var(--font-mono);
+    z-index: 3;
+}
+
+.fs-exit-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: rgba(0, 255, 65, 0.06);
+    color: var(--matrix-green-dim);
+    border: 1px solid var(--hud-border);
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fs-exit-btn:hover {
+    color: var(--matrix-green);
+    border-color: var(--matrix-green);
+    box-shadow: 0 0 10px var(--matrix-green-glow);
+    background: rgba(0, 255, 65, 0.1);
+}
+
+.fs-exit-btn i {
+    width: 14px;
+    height: 14px;
+}
+
+.fs-stop-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 24px;
+    background: rgba(255, 0, 64, 0.15);
+    color: var(--tracking-red);
+    border: 1px solid rgba(255, 0, 64, 0.3);
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fs-stop-btn:hover {
+    background: rgba(255, 0, 64, 0.25);
+    border-color: var(--tracking-red);
+    box-shadow: 0 0 15px var(--tracking-red-glow);
+    transform: scale(1.03);
+}
+
+.fs-stop-btn i {
+    width: 14px;
+    height: 14px;
+}
+
+.fs-esc-hint {
+    font-size: 10px;
+    color: rgba(0, 255, 65, 0.35);
+    padding: 4px 10px;
+    background: rgba(0, 255, 65, 0.04);
+    border-radius: 3px;
+    border: 1px solid rgba(0, 255, 65, 0.08);
+    letter-spacing: 0.05em;
+}
+
+
+/* ==========================================================================
+   SECTION 9: CONFIG PAGE — Stream Preview Thumbnails
+   (preserved from original with terminal theme adjustments)
+   ========================================================================== */
+
+.stream-preview-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all var(--transition-fast);
+}
+
+.stream-preview-card:hover {
+    border-color: var(--border-secondary);
+    box-shadow: var(--shadow-md);
+}
+
+.stream-preview-thumb {
+    aspect-ratio: 16 / 9;
+    background: #0a0e17;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.stream-preview-thumb canvas {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+}
+
+.stream-preview-thumb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
+    );
+    pointer-events: none;
+    animation: scanline-drift 8s linear infinite;
+}
+
+.stream-preview-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--sp-2) var(--sp-3);
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.stream-preview-name {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    color: white;
+}
+
+.stream-preview-loc {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.stream-preview-live {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--accent-green);
+    font-weight: var(--fw-bold);
+}
+
+.stream-preview-live-dot {
+    width: 5px;
+    height: 5px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    animation: dot-pulse 1.5s ease-in-out infinite;
+}
+
+.stream-preview-body {
+    padding: var(--sp-3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.stream-preview-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stream-preview-info-name {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+}
+
+.stream-preview-info-loc {
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+}
+
+.streams-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--sp-3);
+}
+
+
+/* ==========================================================================
+   SECTION 10: CONFIG SECTION HEADERS
+   ========================================================================== */
+
+.config-section {
+    margin-bottom: var(--sp-4);
+}
+
+.config-section-title {
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-bold);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-4);
+}
+
+.config-section-title i {
+    width: 22px;
+    height: 22px;
+    color: var(--accent-blue);
+}
+
+.config-section-title .section-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--accent-blue-soft);
+    color: var(--accent-blue);
+    border-radius: var(--radius-full);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+    flex-shrink: 0;
+}
+
+
+/* ==========================================================================
+   SECTION 11: DETECTION ALERT CARDS
+   ========================================================================== */
+
+.detection-alert-card {
+    background: var(--bg-card);
+    border: 1px solid var(--accent-red);
+    border-left: 4px solid var(--accent-red);
+    border-radius: var(--radius-md);
+    padding: var(--sp-4);
+    display: flex;
+    gap: var(--sp-4);
+    animation: slide-in-alert 0.4s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.detection-alert-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), transparent);
+    pointer-events: none;
+}
+
+.detection-alert-snapshot {
+    width: 120px;
+    height: 80px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-primary);
+}
+
+.detection-alert-snapshot .alert-detection-box {
+    position: absolute;
+    border: 2px solid var(--accent-red);
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+.detection-alert-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+}
+
+.detection-alert-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.detection-alert-cam {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    color: var(--accent-red);
+}
+
+.detection-alert-time {
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+}
+
+.detection-alert-loc {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+.detection-alert-loc i {
+    width: 12px;
+    height: 12px;
+}
+
+.detection-alert-summary {
+    font-size: var(--fs-sm);
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-top: var(--sp-1);
+}
+
+.detection-alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    max-height: 400px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+
+/* ==========================================================================
+   SECTION 12: SAVED STREAM LIBRARY
+   ========================================================================== */
+
+.saved-library-tabs {
+    display: flex;
+    gap: var(--sp-1);
+    margin-bottom: var(--sp-3);
+    background: var(--bg-tertiary);
+    padding: var(--sp-1);
+    border-radius: var(--radius-md);
+}
+
+.saved-library-tab {
+    flex: 1;
+    padding: var(--sp-2);
+    text-align: center;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
+    color: var(--text-tertiary);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.saved-library-tab:hover {
+    color: var(--text-secondary);
+}
+
+.saved-library-tab.active {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.saved-stream-entry {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.saved-stream-entry:hover {
+    background: var(--bg-card-hover);
+}
+
+.saved-stream-favorite {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    transition: all var(--transition-fast);
+    padding: 2px;
+    display: flex;
+    align-items: center;
+}
+
+.saved-stream-favorite:hover {
+    color: var(--accent-amber);
+}
+
+.saved-stream-favorite.active {
+    color: var(--accent-amber);
+}
+
+.saved-stream-favorite i {
+    width: 14px;
+    height: 14px;
+}
+
+.saved-stream-name {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saved-stream-url {
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* ==========================================================================
+   SECTION 13: CANVAS / FEED PLACEHOLDER STYLING
+   ========================================================================== */
+
+.feed-noise-canvas {
+    background: #0d1117;
+}
+
+.feed-placeholder-content {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-2);
+    color: var(--text-tertiary);
+    z-index: 2;
+}
+
+.feed-placeholder-content i {
+    width: 48px;
+    height: 48px;
+    opacity: 0.4;
+}
+
+.feed-placeholder-content .feed-cam-label {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--text-secondary);
+}
+
+.feed-placeholder-content .feed-status-text {
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+}
+
+.feed-live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(255, 0, 64, 0.2);
+    border: 1px solid rgba(255, 0, 64, 0.3);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--tracking-red);
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+}
+
+.feed-live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--tracking-red);
+    border-radius: 50%;
+    animation: dot-pulse 1.2s ease-in-out infinite;
+}
+
+
+/* ==========================================================================
+   SECTION 14: ANIMATIONS
+   ========================================================================== */
+
+@keyframes fs-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes scanline-drift {
+    from { background-position: 0 0; }
+    to   { background-position: 0 100vh; }
+}
+
+@keyframes dot-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.4; transform: scale(0.8); }
+}
+
+@keyframes detection-box-pulse {
+    0%, 100% { box-shadow: 0 0 12px var(--tracking-red-glow); }
+    50%      { box-shadow: 0 0 28px var(--tracking-red-glow); }
+}
+
+@keyframes detection-box-outer {
+    0%, 100% { opacity: 0.2; }
+    50%      { opacity: 0.6; }
+}
+
+@keyframes nav-tracking-pulse {
+    0%, 100% { background: var(--tracking-red-soft); }
+    50%      { background: rgba(255, 0, 64, 0.2); }
+}
+
+@keyframes tile-tracking-pulse {
+    0%, 100% {
+        border-color: var(--tracking-red);
+        box-shadow: 0 0 20px var(--tracking-red-glow);
+    }
+    50% {
+        border-color: var(--tracking-amber);
+        box-shadow: 0 0 30px var(--tracking-amber-glow);
+    }
+}
+
+@keyframes tracking-tile-pulse {
+    0%, 100% {
+        box-shadow: 0 0 20px var(--tracking-red-glow);
+        border-color: var(--tracking-red);
+    }
+    50% {
+        box-shadow: 0 0 35px var(--tracking-red-glow), 0 0 60px rgba(255, 0, 64, 0.15);
+        border-color: #ff3366;
+    }
+}
+
+@keyframes hud-mode-pulse {
+    0%, 100% { background: var(--tracking-red-soft); }
+    50%      { background: rgba(255, 0, 64, 0.25); }
+}
+
+@keyframes hud-text-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.5; }
+}
+
+@keyframes tracking-icon-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+}
+
+@keyframes tracking-enter {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes manual-fs-enter {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes slide-in-alert {
+    from { opacity: 0; transform: translateX(-20px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0; }
+}
+
+/* Blinking cursor accent for terminal feel */
+.terminal-cursor::after {
+    content: '█';
+    animation: cursor-blink 1s step-end infinite;
+    color: var(--matrix-green);
+    font-size: 0.9em;
+    margin-left: 2px;
+}
+
+
+/* ==========================================================================
+   SECTION 15: RESPONSIVE BREAKPOINTS
+   ========================================================================== */
+
+@media (max-width: 1200px) {
+    .fs-nav-panel {
+        width: 220px;
+    }
+
+    .fs-camera-grid {
+        grid-template-columns: repeat(auto-fill, minmax(clamp(180px, 25vw, 350px), 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .fs-nav-panel {
+        width: 200px;
+    }
+
+    .fs-camera-grid {
+        grid-template-columns: repeat(auto-fill, minmax(clamp(160px, 30vw, 300px), 1fr));
+    }
+
+    .streams-preview-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .fs-overlay {
+        flex-direction: column;
+    }
+
+    .fs-nav-panel {
+        width: 100%;
+        height: auto;
+        max-height: 100px;
+        flex-direction: row;
+        border-right: none;
+        border-bottom: 1px solid var(--hud-border);
+    }
+
+    .fs-nav-panel.collapsed {
+        width: 100%;
+        height: 0;
+        max-height: 0;
+    }
+
+    .fs-nav-header {
+        display: none;
+    }
+
+    .fs-nav-list {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 8px;
+    }
+
+    .fs-nav-cam {
+        min-width: 130px;
+        flex-shrink: 0;
+    }
+
+    .fs-camera-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .fs-tracking-grid[data-count="2"] {
+        grid-template-columns: 1fr;
+    }
+
+    .fs-tracking-grid[data-count="3"],
+    .fs-tracking-grid[data-count="4"] {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .streams-preview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .detection-alert-card {
+        flex-direction: column;
+    }
+
+    .detection-alert-snapshot {
+        width: 100%;
+        height: 120px;
+    }
+
+    .fs-hud-bar {
+        padding: 8px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .fs-bottom-bar {
+        padding: 8px 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .fs-camera-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .fs-nav-panel {
+        max-height: 80px;
+    }
+}
