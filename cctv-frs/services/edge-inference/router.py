@@ -71,6 +71,7 @@ async def feed_status():
         "running": pipeline.is_running,
         "fps": round(pipeline.fps, 1),
         "model_loaded": edge_init.is_model_loaded(),
+        "execution_provider": edge_init.get_execution_provider(),
         "latest_match": pipeline.latest_match,
     }
 
@@ -92,16 +93,18 @@ async def video_stream():
         )
 
     async def generate_frames():
+        last_bytes = None
         while pipeline.is_running:
             frame_bytes = await pipeline.get_frame_jpeg()
-            if frame_bytes:
+            if frame_bytes and frame_bytes is not last_bytes:
                 yield (
                     b"--frame\r\n"
                     b"Content-Type: image/jpeg\r\n\r\n"
                     + frame_bytes
                     + b"\r\n"
                 )
-            await asyncio.sleep(0.033)  # ~30 FPS target
+                last_bytes = frame_bytes
+            await asyncio.sleep(0.016)  # ~60 FPS cap; actual rate limited by pipeline
 
     return StreamingResponse(
         generate_frames(),

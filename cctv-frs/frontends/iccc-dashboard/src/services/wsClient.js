@@ -223,6 +223,7 @@ const SentinelWS = {
         switch (type) {
             case 'tracking_start':
             case 'tracking_stop':
+            case 'tracking_update':
             case 'camera_status':
                 this._dispatch(type, data);
                 break;

@@ -60,6 +60,9 @@ const LiveCCTV = {
     _activeStreamId: null,
     _focusedStreamId: null,
 
+    // ---- Real-time status panel state ----
+    _latestTrackingUpdate: null,   // last tracking_update WS payload
+
     /* ==========================================================
        RENDER — Main entry (config page)
        ========================================================== */
@@ -480,8 +483,13 @@ const LiveCCTV = {
                         </div>
                     </div>
 
-                    <!-- Dynamic Content Area (changes based on state) -->
-                    ${this._renderStateContent(streams)}
+                    <!-- Workspace container containing dynamic view on the left and detection alerts panel on the right -->
+                    <div class="fs-workspace" style="display:flex; flex:1; min-width:0; overflow:hidden; position:relative;">
+                        <div class="fs-view-content" style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; position:relative;">
+                            ${this._renderStateContent(streams)}
+                        </div>
+                        ${this._renderStatusPanel()}
+                    </div>
 
                     <!-- Manual Fullscreen Overlay (if active) -->
                     ${this._currentState === 'MANUAL_FULLSCREEN' ? this._renderManualFullscreen(streams) : ''}
@@ -604,7 +612,7 @@ const LiveCCTV = {
     },
 
     /* ==========================================================
-       SINGLE TRACKING — Full viewport single camera
+       SINGLE TRACKING — Full viewport single camera + Status Panel
        ========================================================== */
     _renderSingleTracking(streams) {
         const [cameraId, trackingData] = [...this._trackingCameras.entries()][0] || [];
@@ -616,8 +624,8 @@ const LiveCCTV = {
         const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : 'http://localhost:8000/api/v1/feed/stream';
 
         return `
-            <div class="fs-tracking-container" id="fs-tracking-container">
-                <div class="fs-tracking-single">
+            <div class="fs-tracking-container" id="fs-tracking-container" style="display:flex;gap:0;flex:1;min-width:0;height:100%;">
+                <div class="fs-tracking-single" style="flex:1;min-width:0;position:relative;">
                     <div class="fs-tracking-tile" style="width:100%;height:100%;max-width:100%;max-height:100%;position:relative;">
                         <canvas class="feed-noise-canvas" id="fs-track-canvas-${stream.id}" width="1280" height="800" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
                         <!-- MJPEG live feed -->
@@ -728,7 +736,7 @@ const LiveCCTV = {
     },
 
     /* ==========================================================
-       MANUAL FULLSCREEN — Single camera override
+       MANUAL FULLSCREEN — Single camera override + Status Panel
        ========================================================== */
     _renderManualFullscreen(streams) {
         const stream = streams.find(s => s.id === this._manualFullscreenId);
@@ -741,8 +749,8 @@ const LiveCCTV = {
         const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : 'http://localhost:8000/api/v1/feed/stream';
 
         return `
-            <div class="fs-manual-fullscreen" id="fs-manual-fullscreen">
-                <div class="fs-manual-feed" style="position:relative;">
+            <div class="fs-manual-fullscreen" id="fs-manual-fullscreen" style="display:flex;">
+                <div class="fs-manual-feed" style="position:relative;flex:1;min-width:0;">
                     <canvas class="feed-noise-canvas" id="fs-manual-canvas" width="1280" height="800" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
                     <!-- MJPEG live feed -->
                     <img
@@ -797,6 +805,8 @@ const LiveCCTV = {
                         <i data-lucide="x"></i> CLOSE [ESC]
                     </button>
                 </div>
+                <!-- ▶ Target Verification Status Panel -->
+                ${this._renderStatusPanel()}
             </div>
         `;
     },
@@ -914,6 +924,10 @@ const LiveCCTV = {
         // Remove from tracking set
         this._trackingCameras.delete(camera_id);
         this._detectedStreamIds.delete(camera_id);
+
+        // Clear status panel state
+        this._latestTrackingUpdate = null;
+        this._resetStatusPanel();
 
         // Log
         const streams = SentinelStore.getStreams();
@@ -1362,6 +1376,7 @@ const LiveCCTV = {
         // Register event handlers
         SentinelWS.on('tracking_start', (data) => this._onTrackingStart(data));
         SentinelWS.on('tracking_stop', (data) => this._onTrackingStop(data));
+        SentinelWS.on('tracking_update', (data) => this._onTrackingUpdate(data));
         SentinelWS.on('camera_status', (data) => this._onCameraStatus(data));
         SentinelWS.on('connection', (data) => {
             console.log('[LiveCCTV] WS connection:', data.status);
@@ -1535,5 +1550,244 @@ const LiveCCTV = {
             }
         };
         window.addEventListener('resize', this._resizeHandler);
+    },
+
+    /* ==========================================================
+       TARGET VERIFICATION STATUS PANEL — Renders beside the video
+       ========================================================== */
+    _renderStatusPanel() {
+        const u = this._latestTrackingUpdate;
+        const hasData = !!u;
+
+        return `
+            <div class="sp-status-panel" id="sp-status-panel">
+                <div class="sp-header">
+                    <span class="sp-header-icon">◉</span> TARGET VERIFICATION
+                </div>
+
+                <!-- Detection Status -->
+                <div class="sp-section">
+                    <div class="sp-label">DETECTION STATUS</div>
+                    <div class="sp-value ${hasData ? 'sp-val-green' : 'sp-val-dim'}" id="sp-detection-status">
+                        ${hasData ? '● TARGET DETECTED' : '○ SCANNING...'}
+                    </div>
+                </div>
+
+                <!-- Match Verification -->
+                <div class="sp-section">
+                    <div class="sp-label">MATCH VERIFICATION</div>
+                    <div class="sp-value" id="sp-match-status">
+                        ${hasData && u.match_verified
+                            ? '<span class="sp-val-green">✓ IDENTITY CONFIRMED</span>'
+                            : hasData
+                            ? '<span class="sp-val-amber">⚠ PARTIAL MATCH</span>'
+                            : '<span class="sp-val-dim">— AWAITING DATA</span>'}
+                    </div>
+                </div>
+
+                <!-- Confidence -->
+                <div class="sp-section">
+                    <div class="sp-label">CONFIDENCE</div>
+                    <div class="sp-confidence-bar">
+                        <div class="sp-confidence-fill" id="sp-confidence-fill" style="width:${hasData ? u.confidence : '0%'}"></div>
+                    </div>
+                    <div class="sp-confidence-text" id="sp-confidence-text">${hasData ? u.confidence : '—'}</div>
+                </div>
+
+                <!-- Target Info -->
+                <div class="sp-section">
+                    <div class="sp-label">TARGET</div>
+                    <div class="sp-value sp-val-green" id="sp-target-name" style="font-size:13px;font-weight:700;">
+                        ${hasData ? SentinelHelpers.escapeHtml(u.target_name || u.target_id || 'UNKNOWN') : '—'}
+                    </div>
+                    <div class="sp-value sp-val-dim" id="sp-target-id" style="font-size:10px;margin-top:2px;">
+                        ${hasData ? 'ID: ' + SentinelHelpers.escapeHtml(u.target_id || '') : ''}
+                    </div>
+                </div>
+
+                <!-- Face Comparison -->
+                <div class="sp-section">
+                    <div class="sp-label">FACE COMPARISON</div>
+                    <div class="sp-face-row">
+                        <div class="sp-face-box">
+                            <div class="sp-face-label">REGISTER</div>
+                            <div class="sp-face-img" id="sp-face-register">
+                                ${hasData && u.target_image_b64
+                                    ? '<img src="data:image/jpeg;base64,' + u.target_image_b64 + '" alt="register">'
+                                    : '<span class="sp-face-placeholder">?</span>'}
+                            </div>
+                        </div>
+                        <div class="sp-face-vs">VS</div>
+                        <div class="sp-face-box">
+                            <div class="sp-face-label">INTERCEPT</div>
+                            <div class="sp-face-img" id="sp-face-intercept">
+                                ${hasData && u.face_crop_b64
+                                    ? '<img src="data:image/jpeg;base64,' + u.face_crop_b64 + '" alt="intercept">'
+                                    : '<span class="sp-face-placeholder">?</span>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coordinates -->
+                <div class="sp-section">
+                    <div class="sp-label">COORDINATES</div>
+                    <div class="sp-value sp-val-dim" id="sp-coordinates" style="font-size:11px;">
+                        ${hasData && u.coordinates
+                            ? 'X: ' + u.coordinates.x + '  Y: ' + u.coordinates.y
+                            : '—'}
+                    </div>
+                </div>
+
+                <!-- Faces Detected -->
+                <div class="sp-section">
+                    <div class="sp-label">FACES IN FRAME</div>
+                    <div class="sp-value sp-val-dim" id="sp-faces-count" style="font-size:12px;">
+                        ${hasData ? u.faces_detected : '—'}
+                    </div>
+                </div>
+
+                <!-- Timestamp -->
+                <div class="sp-section">
+                    <div class="sp-label">LAST UPDATE</div>
+                    <div class="sp-value sp-val-dim" id="sp-timestamp" style="font-size:10px;">
+                        ${hasData ? new Date(u.timestamp).toLocaleTimeString() : '—'}
+                    </div>
+                </div>
+
+                <!-- Pipeline FPS -->
+                <div class="sp-section">
+                    <div class="sp-label">PIPELINE FPS</div>
+                    <div class="sp-value sp-val-green sp-fps-value" id="sp-fps" style="font-size:20px;font-weight:700;letter-spacing:0.05em;">
+                        ${hasData && u.fps != null ? u.fps.toFixed(1) : '—'}
+                    </div>
+                </div>
+
+                <!-- Tracking Status -->
+                <div class="sp-section">
+                    <div class="sp-label">TRACKING STATUS</div>
+                    <div class="sp-value" id="sp-tracking-status">
+                        ${hasData && u.tracking_status
+                            ? (u.tracking_status === 'TRACKING'
+                                ? '<span class="sp-val-green">● ACTIVE LOCK</span>'
+                                : u.tracking_status === 'WEAK_SIGNAL'
+                                ? '<span class="sp-val-amber">◐ WEAK SIGNAL</span>'
+                                : '<span class="sp-val-red">○ SIGNAL LOST</span>')
+                            : '<span class="sp-val-dim">○ IDLE</span>'}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /* ==========================================================
+       TRACKING_UPDATE HANDLER — DOM-only updates, no re-render
+       ========================================================== */
+    _onTrackingUpdate(data) {
+        if (!this._isLive || !this._fullscreenActive) return;
+        this._latestTrackingUpdate = data;
+
+        // Update DOM elements directly instead of full re-render
+        const detStatus = document.getElementById('sp-detection-status');
+        if (detStatus) {
+            detStatus.className = 'sp-value sp-val-green';
+            detStatus.textContent = '● TARGET DETECTED';
+        }
+
+        const matchStatus = document.getElementById('sp-match-status');
+        if (matchStatus) {
+            matchStatus.innerHTML = data.match_verified
+                ? '<span class="sp-val-green">✓ IDENTITY CONFIRMED</span>'
+                : '<span class="sp-val-amber">⚠ PARTIAL MATCH</span>';
+        }
+
+        const confFill = document.getElementById('sp-confidence-fill');
+        if (confFill) confFill.style.width = data.confidence || '0%';
+
+        const confText = document.getElementById('sp-confidence-text');
+        if (confText) confText.textContent = data.confidence || '—';
+
+        const tName = document.getElementById('sp-target-name');
+        if (tName) tName.textContent = data.target_name || data.target_id || 'UNKNOWN';
+
+        const tId = document.getElementById('sp-target-id');
+        if (tId) tId.textContent = data.target_id ? 'ID: ' + data.target_id : '';
+
+        // Face crops
+        const fReg = document.getElementById('sp-face-register');
+        if (fReg && data.target_image_b64) {
+            fReg.innerHTML = '<img src="data:image/jpeg;base64,' + data.target_image_b64 + '" alt="register">';
+        }
+        const fInt = document.getElementById('sp-face-intercept');
+        if (fInt && data.face_crop_b64) {
+            fInt.innerHTML = '<img src="data:image/jpeg;base64,' + data.face_crop_b64 + '" alt="intercept">';
+        }
+
+        const coords = document.getElementById('sp-coordinates');
+        if (coords && data.coordinates) {
+            coords.textContent = 'X: ' + data.coordinates.x + '  Y: ' + data.coordinates.y;
+        }
+
+        const faces = document.getElementById('sp-faces-count');
+        if (faces) faces.textContent = data.faces_detected != null ? data.faces_detected : '—';
+
+        const ts = document.getElementById('sp-timestamp');
+        if (ts && data.timestamp) {
+            ts.textContent = new Date(data.timestamp).toLocaleTimeString();
+        }
+
+        // FPS
+        const fpsEl = document.getElementById('sp-fps');
+        if (fpsEl) fpsEl.textContent = data.fps != null ? data.fps.toFixed(1) : '—';
+
+        // Tracking Status
+        const trackSt = document.getElementById('sp-tracking-status');
+        if (trackSt && data.tracking_status) {
+            switch (data.tracking_status) {
+                case 'TRACKING':
+                    trackSt.innerHTML = '<span class="sp-val-green">● ACTIVE LOCK</span>';
+                    break;
+                case 'WEAK_SIGNAL':
+                    trackSt.innerHTML = '<span class="sp-val-amber">◐ WEAK SIGNAL</span>';
+                    break;
+                default:
+                    trackSt.innerHTML = '<span class="sp-val-red">○ SIGNAL LOST</span>';
+            }
+        }
+    },
+
+    /* ==========================================================
+       RESET STATUS PANEL (called on tracking_stop)
+       ========================================================== */
+    _resetStatusPanel() {
+        const detStatus = document.getElementById('sp-detection-status');
+        if (detStatus) {
+            detStatus.className = 'sp-value sp-val-dim';
+            detStatus.textContent = '○ TARGET LOST — RE-SCANNING...';
+        }
+        const matchStatus = document.getElementById('sp-match-status');
+        if (matchStatus) matchStatus.innerHTML = '<span class="sp-val-dim">— NO ACTIVE TRACK</span>';
+        const confFill = document.getElementById('sp-confidence-fill');
+        if (confFill) confFill.style.width = '0%';
+        const confText = document.getElementById('sp-confidence-text');
+        if (confText) confText.textContent = '—';
+        const tName = document.getElementById('sp-target-name');
+        if (tName) tName.textContent = '—';
+        const tId = document.getElementById('sp-target-id');
+        if (tId) tId.textContent = '';
+        const fReg = document.getElementById('sp-face-register');
+        if (fReg) fReg.innerHTML = '<span class="sp-face-placeholder">?</span>';
+        const fInt = document.getElementById('sp-face-intercept');
+        if (fInt) fInt.innerHTML = '<span class="sp-face-placeholder">?</span>';
+        const coords = document.getElementById('sp-coordinates');
+        if (coords) coords.textContent = '—';
+        const faces = document.getElementById('sp-faces-count');
+        if (faces) faces.textContent = '—';
+        const ts = document.getElementById('sp-timestamp');
+        if (ts) ts.textContent = '—';
+        const fpsEl = document.getElementById('sp-fps');
+        if (fpsEl) fpsEl.textContent = '—';
+        const trackSt = document.getElementById('sp-tracking-status');
+        if (trackSt) trackSt.innerHTML = '<span class="sp-val-dim">○ IDLE</span>';
     }
 };

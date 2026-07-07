@@ -37,8 +37,10 @@ def extract_face_crop(frame_bgr: np.ndarray, bbox: np.ndarray, padding: int = 10
     return frame_bgr[y1:y2, x1:x2].copy()
 
 
-def face_crop_to_b64(crop_bgr: np.ndarray, quality: int = 85) -> str:
-    """Encode a BGR face crop as a base64 JPEG string."""
+def face_crop_to_b64(crop_bgr: np.ndarray, quality: int = 60) -> str:
+    """Encode a BGR face crop as a base64 JPEG string, optimized for size."""
+    if crop_bgr is not None and (crop_bgr.shape[0] > 96 or crop_bgr.shape[1] > 96):
+        crop_bgr = cv2.resize(crop_bgr, (96, 96))
     _, buffer = cv2.imencode('.jpg', crop_bgr, [cv2.IMWRITE_JPEG_QUALITY, quality])
     return base64.b64encode(buffer.tobytes()).decode('utf-8')
 

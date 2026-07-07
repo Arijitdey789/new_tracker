@@ -73,7 +73,7 @@ async def run_test():
         event = pipeline.event_queue.get_nowait()
         event_count += 1
         print(f"  - Event {event_count}: type={event['type']}, target_id={event.get('target_id')}, confidence={event.get('confidence')}, coords={event.get('coordinates')}")
-        assert event["type"] in ["tracking_start", "tracking_stop"], f"Unexpected event type: {event['type']}"
+        assert event["type"] in ["tracking_start", "tracking_stop", "tracking_update"], f"Unexpected event type: {event['type']}"
         pipeline.event_queue.task_done()
 
     # Assertions

@@ -76,18 +76,23 @@ async def websocket_events(websocket: WebSocket):
 
 async def broadcast_loop():
     """
-    Background loop that polls events from the pipeline event_queue
-    and broadcasts them directly to all active WebSocket clients.
+    Background loop that polls events from the pipeline event_queue,
+    broadcasts them to all active WebSocket clients, AND publishes
+    them to the central Event Bus for downstream services (trajectory
+    engine, alert service, audit service).
     """
     logger.info("Starting dashboard WebSocket broadcast loop...")
     pipeline = _get_pipeline()
+
+    # Import the event bus for cross-service routing
+    from services.event_bus import event_bus
 
     while True:
         try:
             # Wait for an event from the pipeline
             event = await pipeline.event_queue.get()
 
-            # Broadcast to all active clients
+            # 1. Broadcast to all active WebSocket dashboard clients
             if _active_connections:
                 for conn in list(_active_connections):
                     try:
@@ -96,6 +101,13 @@ async def broadcast_loop():
                         logger.warning(f"Failed to send websocket message, removing client: {e}")
                         if conn in _active_connections:
                             _active_connections.remove(conn)
+
+            # 2. Publish to the central Event Bus for downstream services
+            event_type = event.get("type", "unknown")
+            try:
+                await event_bus.publish(event_type, event)
+            except Exception as e:
+                logger.warning(f"Failed to publish event to bus: {e}")
 
             pipeline.event_queue.task_done()
         except asyncio.CancelledError:

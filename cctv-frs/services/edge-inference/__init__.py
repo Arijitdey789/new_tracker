@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # Global model instance — initialized once at startup
 _face_app: FaceAnalysis = None
 _model_loaded: bool = False
+_execution_provider: str = "none"  # 'gpu', 'cpu', or 'none'
 
 
 def init_face_app(det_size: tuple = (640, 640)):
@@ -27,10 +28,12 @@ def init_face_app(det_size: tuple = (640, 640)):
     Initialize the InsightFace FaceAnalysis model.
 
     Downloads the buffalo_l model pack (~300MB) on first run.
-    Detects and uses available GPU Execution Providers (CUDA, DML, etc.),
-    falling back to CPU on failure or if no GPU is available.
+    GPU-first strategy: tries GPU-only providers first (without CPU in the
+    provider list) so that ONNX Runtime raises an error if the GPU backend
+    is non-functional.  Falls back to CPU only on explicit failure.
+    This prevents the runtime from silently alternating between GPU and CPU.
     """
-    global _face_app, _model_loaded
+    global _face_app, _model_loaded, _execution_provider
     if _model_loaded:
         return _face_app
 
@@ -46,35 +49,37 @@ def init_face_app(det_size: tuple = (640, 640)):
         "DmlExecutionProvider",
         "ROCMExecutionProvider",
         "TensorrtExecutionProvider",
-        "OpenVINOExecutionProvider"
+        "OpenVINOExecutionProvider",
     ]]
 
     _face_app = None
+
+    # ── Step 1: Try GPU-only (no CPU fallback in the list) ────────────
     if gpu_providers:
-        logger.info(f"Detected GPU Execution Providers: {gpu_providers}. Trying GPU execution...")
+        logger.info(f"Detected GPU Execution Providers: {gpu_providers}. Trying GPU-only execution...")
         try:
-            # Prefer GPU providers, using CPUExecutionProvider as fallback in ONNX Runtime
-            providers = gpu_providers + ["CPUExecutionProvider"]
+            # GPU-only — if the GPU runtime cannot load, this will raise
             _face_app = FaceAnalysis(
                 name="buffalo_l",
-                providers=providers,
+                providers=gpu_providers,          # NO CPUExecutionProvider here
             )
-            # Use ctx_id=0 for GPU context
             _face_app.prepare(ctx_id=0, det_size=det_size)
 
-            # Verify if the sessions actually registered the GPU provider
-            active_providers = []
-            for name, model in _face_app.models.items():
+            # Verify sessions actually registered a GPU provider
+            active_providers = set()
+            for model_name, model in _face_app.models.items():
                 if hasattr(model, 'session'):
-                    active_providers.extend(model.session.get_providers())
+                    active_providers.update(model.session.get_providers())
 
-            logger.info(f"InsightFace models prepared successfully on GPU. Active providers: {set(active_providers)}")
-            logger.info("Application is running on the GPU.")
+            logger.info(f"InsightFace models prepared on GPU. Active providers: {active_providers}")
+            logger.info("✓ Application is running on the GPU.")
             _model_loaded = True
+            _execution_provider = "gpu"
         except Exception as e:
-            logger.error(f"Failed to initialize InsightFace on GPU: {e}. Falling back to CPU...")
+            logger.warning(f"GPU initialization failed: {e}. Will fall back to CPU.")
             _face_app = None
 
+    # ── Step 2: CPU fallback ──────────────────────────────────────────
     if _face_app is None:
         logger.info("Initializing InsightFace on CPU...")
         try:
@@ -84,7 +89,8 @@ def init_face_app(det_size: tuple = (640, 640)):
             )
             _face_app.prepare(ctx_id=-1, det_size=det_size)
             _model_loaded = True
-            logger.info("Application is running on the CPU.")
+            _execution_provider = "cpu"
+            logger.info("✓ Application is running on the CPU.")
         except Exception as e:
             logger.error(f"Failed to initialize InsightFace on CPU: {e}")
             raise e
@@ -101,3 +107,8 @@ def get_face_app() -> FaceAnalysis:
 def is_model_loaded() -> bool:
     """Check if the model has been loaded."""
     return _model_loaded
+
+
+def get_execution_provider() -> str:
+    """Return the active execution provider ('gpu', 'cpu', or 'none')."""
+    return _execution_provider

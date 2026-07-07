@@ -1742,3 +1742,220 @@
         max-height: 80px;
     }
 }
+
+
+/* ==========================================================================
+   TARGET VERIFICATION STATUS PANEL  (sp-* prefix)
+   Displayed beside the video stream during tracking / manual fullscreen.
+   Follows the same dark-terminal aesthetic as the rest of the HUD.
+   ========================================================================== */
+
+.sp-status-panel {
+    width: 320px;
+    flex-shrink: 0;
+    background: rgba(8, 12, 8, 0.97);
+    border-left: 1px solid var(--hud-border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 6;
+    font-family: var(--font-mono);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 255, 65, 0.15) transparent;
+    animation: sp-slide-in 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes sp-slide-in {
+    from { transform: translateX(40px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+.sp-status-panel::-webkit-scrollbar {
+    width: 4px;
+}
+.sp-status-panel::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 65, 0.15);
+    border-radius: 4px;
+}
+
+/* ---- Header ---- */
+.sp-header {
+    padding: 14px 18px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--matrix-green);
+    text-shadow: 0 0 8px var(--matrix-green-glow);
+    border-bottom: 1px solid var(--hud-border);
+    background: rgba(0, 255, 65, 0.03);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sp-header-icon {
+    font-size: 10px;
+    animation: dot-pulse 1.4s ease-in-out infinite;
+    color: var(--tracking-red);
+    text-shadow: 0 0 6px var(--tracking-red-glow);
+}
+
+/* ---- Sections ---- */
+.sp-section {
+    padding: 12px 18px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.06);
+}
+
+.sp-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(0, 255, 65, 0.45);
+    margin-bottom: 6px;
+}
+
+.sp-value {
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.sp-val-green {
+    color: var(--matrix-green);
+    text-shadow: 0 0 4px var(--matrix-green-glow);
+}
+
+.sp-val-amber {
+    color: var(--tracking-amber, #ffaa00);
+    text-shadow: 0 0 4px rgba(255, 170, 0, 0.4);
+}
+
+.sp-val-red {
+    color: var(--tracking-red);
+    text-shadow: 0 0 4px var(--tracking-red-glow);
+}
+
+.sp-val-dim {
+    color: rgba(0, 255, 65, 0.35);
+}
+
+/* ---- Confidence Bar ---- */
+.sp-confidence-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 255, 65, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
+    border: 1px solid rgba(0, 255, 65, 0.1);
+}
+
+.sp-confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--matrix-green), #00ff9d);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px var(--matrix-green-glow);
+}
+
+.sp-confidence-text {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--matrix-green);
+    text-shadow: 0 0 10px var(--matrix-green-glow);
+    letter-spacing: 0.05em;
+    text-align: center;
+}
+
+/* ---- Face Comparison Row ---- */
+.sp-face-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 6px;
+}
+
+.sp-face-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+}
+
+.sp-face-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(0, 255, 65, 0.4);
+}
+
+.sp-face-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 4px;
+    border: 1px solid var(--hud-border);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.sp-face-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sp-face-placeholder {
+    font-size: 24px;
+    color: rgba(0, 255, 65, 0.15);
+    font-weight: 700;
+}
+
+.sp-face-vs {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--tracking-red);
+    text-shadow: 0 0 6px var(--tracking-red-glow);
+    letter-spacing: 0.1em;
+    padding-top: 16px; /* offset below face-label */
+}
+
+
+/* ---- Responsive: hide panel on very small screens ---- */
+@media (max-width: 900px) {
+    .sp-status-panel {
+        width: 240px;
+        font-size: 11px;
+    }
+
+    .sp-face-img {
+        width: 60px;
+        height: 60px;
+    }
+
+    .sp-confidence-text {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 600px) {
+    .sp-status-panel {
+        display: none;
+    }
+}
+
+/* ---- FPS Value Glow Pulse ---- */
+.sp-fps-value {
+    animation: sp-fps-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sp-fps-pulse {
+    0%, 100% { text-shadow: 0 0 6px var(--matrix-green-glow); }
+    50%      { text-shadow: 0 0 16px var(--matrix-green-glow), 0 0 30px rgba(0, 255, 65, 0.15); }
+}
