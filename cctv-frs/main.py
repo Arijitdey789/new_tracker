@@ -41,7 +41,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to load detection model during startup: {e}")
 
-    # 2. Start WebSocket broadcast loop (via iccc-bff)
+    # 2. Start the camera feed pipeline automatically (source 0)
+    pipeline_mod = importlib.import_module("services.edge-inference.pipeline")
+    try:
+        await pipeline_mod.pipeline.start(source=0)
+        logger.info("Camera pipeline auto-started successfully at startup.")
+    except Exception as e:
+        logger.error(f"Failed to auto-start camera pipeline: {e}")
+
+    # 3. Start WebSocket broadcast loop (via iccc-bff)
     bff_router_mod = importlib.import_module("services.iccc-bff.router")
     broadcast_task = asyncio.create_task(bff_router_mod.broadcast_loop())
 

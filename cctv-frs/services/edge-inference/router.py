@@ -32,14 +32,18 @@ async def start_feed(
     """Start the camera capture and detection pipeline."""
     pipeline = _get_pipeline()
 
-    if pipeline.is_running:
-        return {"status": "already_running", "fps": pipeline.fps}
-
     # Parse source — integer for webcam index, string for URL/file
     try:
         cam_source = int(source)
     except ValueError:
         cam_source = source
+
+    if pipeline.is_running:
+        if pipeline._camera_source == cam_source:
+            return {"status": "already_running", "fps": pipeline.fps}
+        else:
+            logger.info(f"Stopping active camera pipeline to switch source to: {cam_source}")
+            await pipeline.stop()
 
     try:
         await pipeline.start(source=cam_source)

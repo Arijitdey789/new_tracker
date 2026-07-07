@@ -77,34 +77,21 @@ async def websocket_events(websocket: WebSocket):
 async def broadcast_loop():
     """
     Background loop that polls events from the pipeline event_queue
-    and broadcasts matches to all active WebSocket clients.
+    and broadcasts them directly to all active WebSocket clients.
     """
     logger.info("Starting dashboard WebSocket broadcast loop...")
     pipeline = _get_pipeline()
 
     while True:
         try:
-            # Wait for a match event from the pipeline
-            match_event = await pipeline.event_queue.get()
+            # Wait for an event from the pipeline
+            event = await pipeline.event_queue.get()
 
             # Broadcast to all active clients
             if _active_connections:
-                payload = {
-                    "type": "match",
-                    "payload": {
-                        "target_id": match_event["target_id"],
-                        "target_name": match_event["target_name"],
-                        "confidence": match_event["confidence"],
-                        "threshold": match_event["threshold"],
-                        "camera_id": match_event["camera_id"],
-                        "timestamp": datetime_to_iso(match_event.get("timestamp")),
-                        "face_crop_b64": match_event["face_crop_b64"],
-                        "target_image_b64": match_event["target_image_b64"],
-                    }
-                }
                 for conn in list(_active_connections):
                     try:
-                        await conn.send_json(payload)
+                        await conn.send_json(event)
                     except Exception as e:
                         logger.warning(f"Failed to send websocket message, removing client: {e}")
                         if conn in _active_connections:
