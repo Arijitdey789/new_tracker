@@ -10,8 +10,8 @@
    ============================================================ */
 
 const SentinelAPI = {
-    _baseUrl: (typeof SentinelEndpoints !== 'undefined' && SentinelEndpoints.BFF_BASE_URL)
-              || 'http://localhost:8000',
+    _baseUrl: (typeof SentinelEndpoints !== 'undefined' && SentinelEndpoints.BFF_BASE_URL) !== undefined
+              ? SentinelEndpoints.BFF_BASE_URL : '',
 
     /**
      * Generic fetch wrapper with auth headers and error handling.

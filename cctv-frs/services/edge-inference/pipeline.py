@@ -16,6 +16,11 @@ from typing import Optional
 import importlib
 import base64
 from datetime import datetime
+import threading
+import os
+
+# Improve RTSP stability and set TCP transport
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +38,7 @@ class EdgePipeline:
         self._running: bool = False
         self._current_frame: Optional[np.ndarray] = None
         self._frame_lock = asyncio.Lock()
+        self._cap_lock = threading.Lock()
         self._fps: float = 0.0
         self._camera_source = 0  # default webcam
         self._match_threshold: float = 0.45
@@ -129,7 +135,10 @@ class EdgePipeline:
             loop = asyncio.get_running_loop()
             cap = self._capture
             self._capture = None
-            await loop.run_in_executor(None, cap.release)
+            def _release_cap():
+                with self._cap_lock:
+                    cap.release()
+            await loop.run_in_executor(None, _release_cap)
         self._current_frame = None
         self._latest_match = None
         self._is_mock = False
@@ -164,9 +173,10 @@ class EdgePipeline:
         loop = asyncio.get_running_loop()
 
         def _read_frame():
-            if self._capture and self._capture.isOpened():
-                return self._capture.read()
-            return False, None
+            with self._cap_lock:
+                if self._capture and self._capture.isOpened():
+                    return self._capture.read()
+                return False, None
 
         def calculate_iou(boxA, boxB):
             xA = max(boxA[0], boxB[0])

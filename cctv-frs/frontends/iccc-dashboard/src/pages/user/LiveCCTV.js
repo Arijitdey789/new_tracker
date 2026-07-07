@@ -566,7 +566,7 @@ const LiveCCTV = {
         const isTracking = this._trackingCameras.has(stream.id);
         const isOffline = this._cameraStatus.get(stream.id) === 'offline';
         const trackingData = isTracking ? this._trackingCameras.get(stream.id) : null;
-        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : 'http://localhost:8000/api/v1/feed/stream';
+        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : '/api/v1/feed/stream';
 
         return `
             <div class="fs-camera-tile ${isTracking ? 'tracking' : ''} ${isOffline ? 'offline' : ''}"
@@ -613,7 +613,7 @@ const LiveCCTV = {
 
         const now = new Date();
 
-        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : 'http://localhost:8000/api/v1/feed/stream';
+        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : '/api/v1/feed/stream';
 
         return `
             <div class="fs-tracking-container" id="fs-tracking-container">
@@ -682,7 +682,7 @@ const LiveCCTV = {
 
         const now = new Date();
 
-        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : 'http://localhost:8000/api/v1/feed/stream';
+        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : '/api/v1/feed/stream';
 
         return `
             <div class="fs-tracking-container" id="fs-tracking-container">
@@ -738,7 +738,7 @@ const LiveCCTV = {
         const trackingData = isTracking ? this._trackingCameras.get(stream.id) : null;
         const now = new Date();
 
-        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : 'http://localhost:8000/api/v1/feed/stream';
+        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : '/api/v1/feed/stream';
 
         return `
             <div class="fs-manual-fullscreen" id="fs-manual-fullscreen">
