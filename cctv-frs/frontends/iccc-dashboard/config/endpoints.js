@@ -12,14 +12,14 @@
 
 const SentinelEndpoints = {
     // BFF base URL — the only backend the dashboard talks to
-    BFF_BASE_URL: 'http://localhost:8000',
+    BFF_BASE_URL: '',
 
     // WebSocket endpoint for real-time match events (via BFF)
-    WS_EVENTS_URL: 'ws://localhost:8000/ws/events',
+    WS_EVENTS_URL: (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/events',
 
     // WebSocket endpoint for the Node.js simulation server (dev/demo only)
-    WS_SIMULATION_URL: 'ws://localhost:8765',
+    WS_SIMULATION_URL: (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.hostname + ':8765',
 
     // MJPEG live feed endpoint (proxied via BFF)
-    MJPEG_FEED_URL: 'http://localhost:8000/api/edge/feed',
+    MJPEG_FEED_URL: '/api/v1/feed/stream',
 };

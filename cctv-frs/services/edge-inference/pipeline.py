@@ -30,6 +30,11 @@ from typing import Optional
 import importlib
 import base64
 from datetime import datetime
+import threading
+import os
+
+# Improve RTSP stability and set TCP transport
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +204,6 @@ class EdgePipeline:
             cap = self._capture
             self._capture = None
             await loop.run_in_executor(None, cap.release)
-
         self._current_frame = None
         self._current_jpeg = None
         self._latest_match = None
@@ -237,6 +241,7 @@ class EdgePipeline:
         fps_start = time.time()
         fps_frame_count = 0
         loop = asyncio.get_running_loop()
+
 
         def calculate_iou(boxA, boxB):
             xA = max(boxA[0], boxB[0])

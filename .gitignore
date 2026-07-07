@@ -1,0 +1,9 @@
+mcp-servers/
+cctv-frs/test_rtsp.py
+cctv-frs/test_rtsp_tcp.py
+stderr.log
+stdout.log
+venv/
+pt/
+__pycache__/
+*.pyc
