@@ -19,18 +19,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/feed", tags=["edge-inference"])
 
 
-def _get_pipeline():
-    """Import the singleton pipeline."""
+def _get_pipeline(camera_id: str = "cam-0"):
+    """Import the pipeline manager."""
     mod = importlib.import_module("services.edge-inference.pipeline")
-    return mod.pipeline
+    return mod.get_pipeline(camera_id)
 
 
 @router.post("/start")
 async def start_feed(
-    source: str = Query(default="0", description="Camera index (0,1,...) or RTSP URL or video file path")
+    source: str = Query(default="0", description="Camera index (0,1,...) or RTSP URL or video file path"),
+    camera_id: str = Query(default="cam-0", description="Camera identifier")
 ):
     """Start the camera capture and detection pipeline."""
-    pipeline = _get_pipeline()
+    pipeline = _get_pipeline(camera_id)
 
     # Parse source — integer for webcam index, string for URL/file
     try:
@@ -54,17 +55,17 @@ async def start_feed(
 
 
 @router.post("/stop")
-async def stop_feed():
+async def stop_feed(camera_id: str = Query(default="cam-0", description="Camera identifier")):
     """Stop the camera capture and pipeline."""
-    pipeline = _get_pipeline()
+    pipeline = _get_pipeline(camera_id)
     await pipeline.stop()
     return {"status": "stopped"}
 
 
 @router.get("/status")
-async def feed_status():
+async def feed_status(camera_id: str = Query(default="cam-0", description="Camera identifier")):
     """Get current pipeline status."""
-    pipeline = _get_pipeline()
+    pipeline = _get_pipeline(camera_id)
     edge_init = importlib.import_module("services.edge-inference")
 
     return {
@@ -77,14 +78,14 @@ async def feed_status():
 
 
 @router.get("/stream")
-async def video_stream():
+async def video_stream(camera_id: str = Query(default="cam-0", description="Camera identifier")):
     """
     MJPEG live stream endpoint.
 
     Returns annotated frames with bounding boxes around matched targets.
     Non-target faces are not annotated.
     """
-    pipeline = _get_pipeline()
+    pipeline = _get_pipeline(camera_id)
 
     if not pipeline.is_running:
         raise HTTPException(
@@ -114,9 +115,10 @@ async def video_stream():
 
 @router.post("/threshold")
 async def set_threshold(
-    value: float = Query(..., ge=0.0, le=1.0, description="Match similarity threshold (0.0 to 1.0)")
+    value: float = Query(..., ge=0.0, le=1.0, description="Match similarity threshold (0.0 to 1.0)"),
+    camera_id: str = Query(default="cam-0", description="Camera identifier")
 ):
     """Update the match similarity threshold at runtime."""
-    pipeline = _get_pipeline()
+    pipeline = _get_pipeline(camera_id)
     pipeline.set_threshold(value)
     return {"status": "updated", "threshold": value}

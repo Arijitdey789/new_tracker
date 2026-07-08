@@ -574,7 +574,7 @@ const LiveCCTV = {
         const isTracking = this._trackingCameras.has(stream.id);
         const isOffline = this._cameraStatus.get(stream.id) === 'offline';
         const trackingData = isTracking ? this._trackingCameras.get(stream.id) : null;
-        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : '/api/v1/feed/stream';
+        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl(stream.id) : '/api/v1/feed/stream?camera_id=' + stream.id;
 
         return `
             <div class="fs-camera-tile ${isTracking ? 'tracking' : ''} ${isOffline ? 'offline' : ''}"
@@ -621,7 +621,7 @@ const LiveCCTV = {
 
         const now = new Date();
 
-        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : '/api/v1/feed/stream';
+        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl(stream.id) : '/api/v1/feed/stream?camera_id=' + stream.id;
 
         return `
             <div class="fs-tracking-container" id="fs-tracking-container" style="display:flex;gap:0;flex:1;min-width:0;height:100%;">
@@ -690,7 +690,7 @@ const LiveCCTV = {
 
         const now = new Date();
 
-        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : '/api/v1/feed/stream';
+        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl(stream.id) : '/api/v1/feed/stream?camera_id=' + stream.id;
 
         return `
             <div class="fs-tracking-container" id="fs-tracking-container">
@@ -746,7 +746,7 @@ const LiveCCTV = {
         const trackingData = isTracking ? this._trackingCameras.get(stream.id) : null;
         const now = new Date();
 
-        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl() : '/api/v1/feed/stream';
+        const feedUrl = (typeof SentinelAPI !== 'undefined') ? SentinelAPI.getMjpegFeedUrl(stream.id) : '/api/v1/feed/stream?camera_id=' + stream.id;
 
         return `
             <div class="fs-manual-fullscreen" id="fs-manual-fullscreen" style="display:flex;">
@@ -1256,10 +1256,7 @@ const LiveCCTV = {
         // Initialize all cameras as online
         streams.forEach(s => this._cameraStatus.set(s.id, 'online'));
 
-        // ---- Start the backend pipeline with the first stream's RTSP URL ----
-        // Use the URL of the first added stream as the camera source.
-        // The backend pipeline currently handles one source at a time.
-        const firstStream = streams[0];
+        // ---- Start the backend pipeline for all streams ----
         const thresholdNormalized = (this._threshold / 100).toFixed(2); // convert % → 0.0-1.0
 
         if (typeof SentinelAPI !== 'undefined') {
@@ -1274,11 +1271,19 @@ const LiveCCTV = {
             });
             
             Promise.all(enrollmentPromises)
-                .then(() => SentinelAPI.startCamera(firstStream.url))
+                .then(() => {
+                    const startPromises = streams.map(stream => 
+                        SentinelAPI.startCamera(stream.url, stream.id)
+                    );
+                    return Promise.all(startPromises);
+                })
                 .then(res => {
-                    console.log('[LiveCCTV] Backend pipeline started:', res);
-                    // Set threshold after pipeline is up
-                    return SentinelAPI.setThreshold(parseFloat(thresholdNormalized));
+                    console.log('[LiveCCTV] Backend pipelines started:', res);
+                    // Set threshold after pipelines are up for all streams
+                    const thresholdPromises = streams.map(stream => 
+                        SentinelAPI.setThreshold(parseFloat(thresholdNormalized), stream.id)
+                    );
+                    return Promise.all(thresholdPromises);
                 })
                 .then(res => {
                     console.log('[LiveCCTV] Threshold set:', res);
@@ -1338,11 +1343,12 @@ const LiveCCTV = {
         this._cameraStatus.clear();
         this._currentPage = 0;
 
-        // Stop the backend camera pipeline
+        // Stop all backend camera pipelines
         if (typeof SentinelAPI !== 'undefined') {
-            SentinelAPI.stopCamera()
-                .then(() => console.log('[LiveCCTV] Backend pipeline stopped.'))
-                .catch(err => console.warn('[LiveCCTV] Pipeline stop error (may not have been running):', err.message));
+            const streams = SentinelStore.getStreams();
+            const stopPromises = streams.map(stream => SentinelAPI.stopCamera(stream.id).catch(err => console.warn(`[LiveCCTV] Pipeline stop error for ${stream.id}:`, err.message)));
+            Promise.all(stopPromises)
+                .then(() => console.log('[LiveCCTV] All backend pipelines stopped.'));
         }
 
         // Stop WebSocket

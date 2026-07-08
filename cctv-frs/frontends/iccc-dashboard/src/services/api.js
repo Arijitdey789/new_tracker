@@ -73,41 +73,42 @@ const SentinelAPI = {
     /**
      * Start the camera capture pipeline.
      * @param {string} source - RTSP URL, webcam index ("0"), or file path.
+     * @param {string} cameraId - Camera identifier
      */
-    async startCamera(source) {
-        const url = `/api/v1/feed/start?source=${encodeURIComponent(source)}`;
+    async startCamera(source, cameraId = "cam-0") {
+        const url = `/api/v1/feed/start?source=${encodeURIComponent(source)}&camera_id=${encodeURIComponent(cameraId)}`;
         return this._request('POST', url);
     },
 
     /**
      * Stop the camera capture pipeline.
      */
-    async stopCamera() {
-        return this._request('POST', '/api/v1/feed/stop');
+    async stopCamera(cameraId = "cam-0") {
+        return this._request('POST', `/api/v1/feed/stop?camera_id=${encodeURIComponent(cameraId)}`);
     },
 
     /**
      * Set the match similarity threshold (0.0 – 1.0).
      * @param {number} threshold - Value between 0.0 and 1.0.
      */
-    async setThreshold(threshold) {
-        const url = `/api/v1/feed/threshold?value=${encodeURIComponent(threshold)}`;
+    async setThreshold(threshold, cameraId = "cam-0") {
+        const url = `/api/v1/feed/threshold?value=${encodeURIComponent(threshold)}&camera_id=${encodeURIComponent(cameraId)}`;
         return this._request('POST', url);
     },
 
     /**
      * Get the current pipeline status.
      */
-    async getFeedStatus() {
-        return this._request('GET', '/api/v1/feed/status');
+    async getFeedStatus(cameraId = "cam-0") {
+        return this._request('GET', `/api/v1/feed/status?camera_id=${encodeURIComponent(cameraId)}`);
     },
 
     /**
      * Returns the full URL for the MJPEG live stream img src.
      * Must be called after startCamera() succeeds.
      */
-    getMjpegFeedUrl() {
-        return `${this._baseUrl}/api/v1/feed/stream`;
+    getMjpegFeedUrl(cameraId = "cam-0") {
+        return `${this._baseUrl}/api/v1/feed/stream?camera_id=${encodeURIComponent(cameraId)}`;
     },
 
     /* ==========================================================

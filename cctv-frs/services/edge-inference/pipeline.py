@@ -82,7 +82,8 @@ class EdgePipeline:
     runs matching against the watchlist, and produces annotated output frames.
     """
 
-    def __init__(self):
+    def __init__(self, camera_id="cam-0"):
+        self.camera_id = camera_id
         self._capture: Optional[cv2.VideoCapture] = None
         self._reader: Optional[_ThreadedCameraReader] = None
         self._running: bool = False
@@ -456,7 +457,7 @@ class EdgePipeline:
                                 face_crop_b64 = embedder_mod.face_crop_to_b64(face_crop)
                                 event = {
                                     "type": "tracking_start",
-                                    "camera_id": "cam-0",
+                                    "camera_id": self.camera_id,
                                     "target_id": best_target_id,
                                     "confidence": f"{int(best_score * 100)}%",
                                     "coordinates": {
@@ -480,7 +481,7 @@ class EdgePipeline:
                                     "bbox": self._tracked_bbox,
                                     "face_crop_b64": face_crop_b64,
                                     "target_image_b64": best_target_crop_b64,
-                                    "camera_id": "cam-0"
+                                    "camera_id": self.camera_id
                                 }
                         else:
                             # We are already tracking a target. Associate detections by similarity OR IoU overlap
@@ -532,7 +533,7 @@ class EdgePipeline:
                                     "bbox": self._tracked_bbox,
                                     "face_crop_b64": face_crop_b64,
                                     "target_image_b64": self._tracked_target_crop_b64,
-                                    "camera_id": "cam-0"
+                                    "camera_id": self.camera_id
                                 }
                             else:
                                 # Detection failed to find the target face, increment lost counter
@@ -550,7 +551,7 @@ class EdgePipeline:
 
                             update_event = {
                                 "type": "tracking_update",
-                                "camera_id": "cam-0",
+                                "camera_id": self.camera_id,
                                 "target_id": self._tracked_target_id,
                                 "target_name": self._tracked_target_name,
                                 "confidence": f"{int(self._track_confidence * 100)}%",
@@ -587,7 +588,7 @@ class EdgePipeline:
                 self._is_tracking = False
                 event = {
                     "type": "tracking_stop",
-                    "camera_id": "cam-0",
+                    "camera_id": self.camera_id,
                     "target_id": self._tracked_target_id,
                     "timestamp": datetime.utcnow().isoformat() + "Z"
                 }
@@ -660,5 +661,13 @@ class EdgePipeline:
         return self._current_jpeg
 
 
-# Singleton pipeline instance
-pipeline = EdgePipeline()
+# Dictionary of pipelines
+pipelines = {}
+
+def get_pipeline(camera_id="cam-0") -> EdgePipeline:
+    if camera_id not in pipelines:
+        pipelines[camera_id] = EdgePipeline(camera_id=camera_id)
+    return pipelines[camera_id]
+
+# Singleton pipeline instance for legacy startup compatibility
+pipeline = get_pipeline("cam-0")
