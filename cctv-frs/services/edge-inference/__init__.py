@@ -65,11 +65,25 @@ def init_face_app(det_size: tuple = (640, 640)):
             )
             _face_app.prepare(ctx_id=0, det_size=det_size)
 
-            # Verify sessions actually registered a GPU provider
+            # Verify sessions actually registered a GPU provider.
+            # ONNX Runtime can silently fall back to CPU if CUDA library versions
+            # don't match the onnxruntime-gpu build — this catches that case.
             active_providers = set()
             for model_name, model in _face_app.models.items():
                 if hasattr(model, 'session'):
                     active_providers.update(model.session.get_providers())
+
+            _gpu_provider_names = {
+                "CUDAExecutionProvider", "DmlExecutionProvider",
+                "ROCMExecutionProvider", "TensorrtExecutionProvider",
+                "OpenVINOExecutionProvider",
+            }
+            if not active_providers.intersection(_gpu_provider_names):
+                raise RuntimeError(
+                    f"ONNX Runtime silently fell back to CPU. Active providers: {active_providers}. "
+                    "Ensure onnxruntime-gpu is installed and CUDA libraries match the ORT version "
+                    "(see: https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html)."
+                )
 
             logger.info(f"InsightFace models prepared on GPU. Active providers: {active_providers}")
             logger.info("✓ Application is running on the GPU.")

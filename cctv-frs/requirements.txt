@@ -17,8 +17,11 @@ numpy>=1.24.0,<2.0.0
 Pillow>=10.0.0
 
 # Face Detection & Embedding (ArcFace 512-d via ONNX)
+# Use onnxruntime-gpu for NVIDIA GPU acceleration (CUDA).
+# onnxruntime-gpu and onnxruntime are mutually exclusive — install only one.
+# For CPU-only machines, swap this line for: onnxruntime>=1.16.0
 insightface>=0.7.3
-onnxruntime>=1.16.0
+onnxruntime-gpu>=1.16.0
 
 # WebSocket support (included with uvicorn[standard])
 websockets>=11.0
